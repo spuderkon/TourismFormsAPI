@@ -13,7 +13,7 @@ public partial class Survey
 
     public DateTime StartDate { get; set; }
 
-    public DateTime CompletionDate { get; set; }
+    public DateTime? CompletionDate { get; set; }
 
     public DateTime EndDate { get; set; }
 
@@ -26,6 +26,7 @@ public partial class Survey
     public string CityName { get; set; } = null!;
 
     public int CityId { get; set; }
+    public string? Comment { get; set; }
 
     public virtual ICollection<Answer> Answers { get; set; } = new List<Answer>();
 

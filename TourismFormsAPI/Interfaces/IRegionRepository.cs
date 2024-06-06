@@ -4,7 +4,6 @@ namespace TourismFormsAPI.Interfaces
 {
     public interface IRegionRepository
     {
-        public List<Region> GetAll();
-        public Region GetById(int id);
+        public Task<IEnumerable<Region>> GetAll();
     }
 }

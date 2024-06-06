@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 using TourismFormsAPI.Interfaces;
 using TourismFormsAPI.Models;
+using TourismFormsAPI.ModelsDTO;
 using TourismFormsAPI.ModelsDTO.Requests;
 
 namespace TourismFormsAPI.Repositories
@@ -20,7 +21,7 @@ namespace TourismFormsAPI.Repositories
         #region GET
         public List<Municipality> GetAll()
         {
-            return _context.Municipalities.ToList();
+            return LoadData(_context.Municipalities.Include(m => m.Region)).ToList();
         }
 
         public Municipality? GetById(int id)
@@ -31,57 +32,85 @@ namespace TourismFormsAPI.Repositories
 
             throw new Exception();
         }
+
+        private IQueryable<Municipality> LoadData(IQueryable<Municipality> items)
+        {
+            return items
+                .Select(x => new MunicipalityDTO(x)
+                {
+                    Region = new RegionDTO(x.Region)
+                });
+        }
         #endregion
 
         #region POST
-        public Municipality Create(MunicipalityPost body)
+        public async Task<Municipality> Create(MunicipalityPost body)
         {
-            Municipality itemToCreate = new Municipality()
+            try
             {
-                Name = body.Name,
-                RegionId = body.RegionId,
-                Login = body.Login,
-                Password = body.Password,
-                Email = body.Email,
-                IsAdmin = body.IsAdmin,
-            };
-            _context.Municipalities.Add(itemToCreate);
-            _context.SaveChanges();
-            return itemToCreate;
+                Municipality itemToCreate = new Municipality()
+                {
+                    Name = body.Name,
+                    RegionId = body.RegionId,
+                    Email = body.Email,
+                    IsAdmin = body.IsAdmin,
+                };
+                await _context.Municipalities.AddAsync(itemToCreate);
+                await _context.SaveChangesAsync();
+                itemToCreate = _context.Municipalities.Include(m => m.Region).First(m => m.Id == itemToCreate.Id);
+                return itemToCreate;
+            }
+            catch (Exception ex) 
+            { 
+                throw new Exception(ex.Message);
+            }
         }
         #endregion
 
         #region PUT
-        public Municipality Update(int id,MunicipalityUpdate body)
+        public Task Update(MunicipalityPut body)
         {
-            var itemToUpdate = _context.Municipalities.FirstOrDefault(m => m.Id == id);
-            if (itemToUpdate is not null)
+            try
             {
-                itemToUpdate.Name = body.Name;
-                itemToUpdate.RegionId = body.RegionId;
-                itemToUpdate.Email = body.Email;
-                itemToUpdate.IsAdmin = body.IsAdmin;
+                var itemToUpdate = _context.Municipalities.FirstOrDefault(m => m.Id == body.Id);
+                if (itemToUpdate is not null)
+                {
+                    itemToUpdate.Name = body.Name;
+                    itemToUpdate.RegionId = body.RegionId;
+                    itemToUpdate.Email = body.Email;
+                    itemToUpdate.IsAdmin = body.IsAdmin;
 
-                _context.Municipalities.Update(itemToUpdate);
-                _context.SaveChanges();
-                return itemToUpdate;
+                    _context.Municipalities.Update(itemToUpdate);
+                    _context.SaveChanges();
+                    return Task.CompletedTask;
+                }
+                return Task.FromException(new Exception("NotFound"));
             }
-            throw new Exception();
+            catch (Exception ex)
+            {
+                return Task.FromException(ex);
+            }
         }
         #endregion
 
         #region DELETE
-        public void Delete(int id)
+        public Task Delete(int id)
         {
-            var itemToDelete = _context.Municipalities.FirstOrDefault(m => m.Id == id);
-            if (itemToDelete is not null)
+            try
             {
-                _context.Municipalities.Remove(itemToDelete);
-                _context.SaveChanges();
+                var itemToDelete = _context.Municipalities.FirstOrDefault(m => m.Id == id);
+                if (itemToDelete is not null)
+                {
+                    _context.Municipalities.Remove(itemToDelete);
+                    _context.SaveChanges();
+                    return Task.CompletedTask;
+                }
+                else
+                    return Task.FromException(new Exception("NotFound"));
             }
-            else
+            catch (Exception ex)
             {
-                throw new Exception();
+                return Task.FromException(ex);
             }
         }
         #endregion

@@ -1,4 +1,7 @@
-﻿using System.Linq;
+﻿using System.Data;
+using System.Linq;
+
+using ClosedXML.Excel;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -22,14 +25,14 @@ namespace TourismFormsAPI.Repositories
 
         public List<Form> GetAll()
         {
-            return _context.Forms.Include(x => x.Criterias).ToList();
+            return _context.Forms.ToList();
         }
 
         public Form? GetById(int id)
         {
             try
             {
-                Form form = _context.Forms.Where(form => form.Id == id).FirstOrDefault();
+                Form form = _context.Forms.FirstOrDefault(form => form.Id == id);
                 if (form is not null)
                 {
                     form = _context.Forms
@@ -58,7 +61,6 @@ namespace TourismFormsAPI.Repositories
                                             MeasureId = question.MeasureId,
                                             Hidden = question.Hidden,
                                             FillMethodId = question.FillMethodId,
-                                            Answers = new List<Answer>(),
                                             FillMethod = question.FillMethod != null ? new FillMethod
                                             {
                                                 Id = question.FillMethod.Id,
@@ -69,7 +71,8 @@ namespace TourismFormsAPI.Repositories
                                             {
                                                 Id = question.Measure.Id,
                                                 Name = question.Measure.Name
-                                            } : null
+                                            } : null,
+                                            Answers = question.Answers.Where(a => a.QuestionId == question.Id).ToList(),
                                         }).ToList()
                                     }).ToList()
                                 })
@@ -83,6 +86,77 @@ namespace TourismFormsAPI.Repositories
                 throw new Exception(ex.Message);
             }
             
+        }
+
+        public Task<byte[]> GetExcel(int id)
+        {
+            try
+            {
+                var form = GetById(id);
+                var surveys = _context.Surveys.Where(s => s.FormId == id).Include(s => s.Answers).Include(s => s.City).Include(s => s.Form).ToList();
+                if (surveys is not null && form is not null)
+                {
+                    using (var workBook = new XLWorkbook())
+                    {
+                        var ws = workBook.Worksheets.Add($"{form.Name}");
+
+                        ws.Cell("A1").Value = "Дата формирования отчета:";
+                        ws.Cell("B1").Value = DateTime.Now;
+                        ws.Cell("A2").Value = "Город";
+
+                        int rowIndex = 3;
+                        int columnIndex = 1;
+                        foreach (var survey in surveys)
+                        {
+                            ws.Cell(rowIndex++, columnIndex).Value = survey.CityName;
+                        }
+
+                        rowIndex = 2;
+                        columnIndex = 2;
+                        foreach (var criteria in form.Criterias)
+                        {
+                            foreach (var question in criteria.Questions)
+                            {
+                                ws.Cell(rowIndex, columnIndex++).Value = $"{criteria.Sequence}.{question.Sequence}";
+                            }
+                        }
+                        ws.Cell(rowIndex, columnIndex++).Value = "Оценка";
+                        ws.Cell(rowIndex, columnIndex++).Value = "Группа";
+
+                        
+                        rowIndex = 3;
+                        columnIndex = 2;
+                        foreach(var survey in surveys)
+                        {
+                            foreach (var criteria in form.Criterias )
+                            {
+                                foreach (var question in criteria.Questions)
+                                {
+                                    var answer = survey.Answers.FirstOrDefault(a => a.SurveyId == survey.Id && a.QuestionId == question.Id);
+                                    if (answer is not null)
+                                        ws.Cell(rowIndex, columnIndex++).Value = answer.Score;
+                                }
+                            }
+                            columnIndex = 2;
+                            rowIndex++;
+                        }
+                        using (var stream = new MemoryStream())
+                        {
+                            workBook.SaveAs(stream);
+                            var content = stream.ToArray();
+
+                            return Task.FromResult(content);
+                        }
+                    }
+                }
+                else
+                    throw new Exception("NotFound");
+
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.Message);
+            }
         }
 
         private IQueryable<Form> LoadData(IQueryable<Form> items)
@@ -103,11 +177,34 @@ namespace TourismFormsAPI.Repositories
                 var itemToCreate = new Form()
                 {
                     Name = body.Name,
-                    CreationDate = body.CreationDate
+                    CreationDate = DateTime.Now
                 };
                 _context.Forms.Add(itemToCreate);
                 _context.SaveChanges();
                 return itemToCreate;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.Message);
+            }
+        }
+        #endregion
+
+        #region UPDATE
+        public Task Update(FormPut body)
+        {
+            try
+            {
+                var itemToUpdate = _context.Forms.FirstOrDefault(x => x.Id == body.Id);
+                if (itemToUpdate is not null)
+                {
+                    itemToUpdate.Name = body.Name;
+                    itemToUpdate.ModifiedDate = DateTime.Now;
+                    _context.Forms.Update(itemToUpdate);
+                    _context.SaveChanges();
+                    return Task.CompletedTask;
+                }
+                throw new Exception("Not Found");
             }
             catch (Exception ex)
             {

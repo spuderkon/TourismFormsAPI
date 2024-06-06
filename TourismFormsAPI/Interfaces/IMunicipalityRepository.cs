@@ -7,8 +7,8 @@ namespace TourismFormsAPI.Interfaces
     {
         public List<Municipality> GetAll();
         public Municipality? GetById(int id);
-        public Municipality Create(MunicipalityPost body);
-        public Municipality Update(int id, MunicipalityUpdate body);
-        public void Delete(int id);
+        public Task<Municipality> Create(MunicipalityPost body);
+        public Task Update(MunicipalityPut body);
+        public Task Delete(int id);
     }
 }

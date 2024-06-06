@@ -1,6 +1,6 @@
 ﻿namespace TourismFormsAPI.ModelsDTO.Requests
 {
-    public class FormPost
+    public class MeasurePost
     {
         public string Name { get; set; }
     }

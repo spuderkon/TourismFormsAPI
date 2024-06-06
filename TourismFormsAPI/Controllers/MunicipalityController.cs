@@ -20,13 +20,13 @@ namespace TourismFormsAPI.Controllers
         }
 
         #region GET
-        [HttpGet("GetAll"), Authorize(Policy = "isAdmin")]
+        [HttpGet("GetAll"), Authorize(Policy = "IsAdmin")]
         public ActionResult<IEnumerable<Municipality>> GetAll()
         {
             return Ok(_iMunicipalityRepository.GetAll());
         }
 
-        [HttpGet("GetById/{id}"), Authorize(Policy = "isAdmin")]
+        [HttpGet("GetById/{id}"), Authorize(Policy = "IsAdmin")]
         public ActionResult<IEnumerable<Municipality>> GetById(int id)
         {
             try
@@ -41,20 +41,21 @@ namespace TourismFormsAPI.Controllers
         #endregion
 
         #region POST
-        [HttpPost("Create"), Authorize(Policy = "isAdmin")]
-        public IActionResult Create([FromBody] MunicipalityPost body)
+        [HttpPost("Create"), Authorize(Policy = "IsAdmin")]
+        public async Task<IActionResult> Create([FromBody] MunicipalityPost body)
         {
-            return Ok(_iMunicipalityRepository.Create(body));
+            return Ok(await _iMunicipalityRepository.Create(body));
         }
         #endregion
 
         #region PUT
-        [HttpPut("Update/{id}"), Authorize(Policy = "isAdmin")]
-        public IActionResult Update(int id,[FromBody] MunicipalityUpdate body)
+        [HttpPut("Update"), Authorize(Policy = "IsAdmin")]
+        public async Task<IActionResult> Update([FromBody] MunicipalityPut body)
         {
             try
             {
-                return Ok(_iMunicipalityRepository.Update(id, body));
+                await _iMunicipalityRepository.Update(body);
+                return Ok();
             }
             catch
             {
@@ -64,12 +65,12 @@ namespace TourismFormsAPI.Controllers
         #endregion
 
         #region DELETE
-        [HttpDelete("Delete/{id}"), Authorize(Policy = "isAdmin")]
-        public IActionResult Delete(int id)
+        [HttpDelete("Delete/{id}"), Authorize(Policy = "IsAdmin")]
+        public async Task<IActionResult> Delete(int id)
         {
             try
             {
-                _iMunicipalityRepository.Delete(id);
+                await _iMunicipalityRepository.Delete(id);
                 return Ok();
             }
             catch

@@ -1,6 +1,15 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.IO;
+
+using ClosedXML.Excel;
+
+using DocumentFormat.OpenXml.Spreadsheet;
+
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+
+using Serilog;
 
 using TourismFormsAPI.Interfaces;
 using TourismFormsAPI.Models;
@@ -20,10 +29,12 @@ namespace TourismFormsAPI.Controllers
         }
 
         #region GET
-        [HttpGet("GetAll"), Authorize]
+        [HttpGet("GetAll"), Authorize(Policy = "IsAdmin")]
         public ActionResult<IEnumerable<Survey>> GetAll()
         {
-            return Ok(_iSurveyRepository.GetAll());
+            var result = _iSurveyRepository.GetAll();
+            Log.Information("User with id {@id} got {@result}", int.Parse(HttpContext.User.Claims.First(x => x.Type == "id").Value), result);
+            return Ok(result);
         }
         [HttpGet("GetById/{id}"), Authorize]
         public ActionResult<IEnumerable<Survey>> GetById(int id)
@@ -43,7 +54,9 @@ namespace TourismFormsAPI.Controllers
         {
             try
             {
-                return Ok(_iSurveyRepository.GetMyAll(int.Parse(HttpContext.User.Claims.First(x => x.Type == "id").Value)));
+                var result = _iSurveyRepository.GetMyAll(int.Parse(HttpContext.User.Claims.First(x => x.Type == "id").Value));
+                Log.Information("User with id {@id} got {@result}", int.Parse(HttpContext.User.Claims.First(x => x.Type == "id").Value), result);
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -51,7 +64,7 @@ namespace TourismFormsAPI.Controllers
             }
         }
         [HttpGet("GetMyById/{id}"), Authorize]
-        public ActionResult<Survey> GetMyById(int id)
+        public ActionResult<Form> GetMyById(int id)
         {
             try
             {
@@ -62,12 +75,18 @@ namespace TourismFormsAPI.Controllers
                 return NotFound();
             }
         }
-        [HttpGet("GetExcel/{id}"), Authorize]
-        public ActionResult<Survey> GetExcel(int id)
+        [HttpGet("GetExcel/{id}")]
+        public ActionResult GetExcel(int id)
         {
             try
             {
-                return Ok(_iSurveyRepository.GetExcel(id));
+
+                var result = _iSurveyRepository.GetExcel(id).Result;
+      
+                return File(
+                        result,
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        $"survey{id}.xlsx");
             }
             catch (Exception ex)
             {
@@ -77,12 +96,13 @@ namespace TourismFormsAPI.Controllers
         #endregion
 
         #region POST
-        [HttpPost("Create")]
-        public IActionResult Create([FromBody] SurveyPost body)
+        [HttpPost("CreateArray")]
+        public IActionResult CreateArray([FromBody] SurveyPost[] body)
         {
             try
             {
-                return Ok(_iSurveyRepository.Create(body));
+                _iSurveyRepository.CreateArray(body);
+                return Ok();
             }
             catch (Exception ex)
             {
@@ -92,12 +112,51 @@ namespace TourismFormsAPI.Controllers
         #endregion
 
         #region PUT
-        [HttpPut("UpdateMy/{id}"), Authorize]
-        public ActionResult<Survey> UpdateMy(int id, [FromBody] SurveyPut body)
+        [HttpPut("UpdateMy"), Authorize]
+        public ActionResult<Survey> UpdateMy([FromBody] SurveyPut body)
         {
             try
             {
-                return Ok(_iSurveyRepository.UpdateMy(id, int.Parse(HttpContext.User.Claims.First(x => x.Type == "id").Value), body));
+                return Ok(_iSurveyRepository.UpdateMy(int.Parse(HttpContext.User.Claims.First(x => x.Type == "id").Value), body));
+            }
+            catch (Exception ex)
+            {
+                return NotFound();
+            }
+        }
+        [HttpPut("Extend/{id}/{completionDate}"), Authorize(Policy = "IsAdmin")]
+        public async Task<ActionResult<Survey>> Extend(int id, DateTime newCompletionDate)
+        {
+            try
+            {
+                await _iSurveyRepository.Extend(id, newCompletionDate);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return NotFound();
+            }
+        }
+        [HttpPut("Revision"), Authorize(Policy = "IsAdmin")]
+        public async Task<ActionResult> Revision([FromBody] SurveyRevisionPut body)
+        {
+            try
+            {
+                await _iSurveyRepository.Revision(body);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return NotFound();
+            }
+        }
+        [HttpPut("SubmitForEvaluation/{id}"), Authorize]
+        public async Task<ActionResult> SubmitForEvaluation(int id)
+        {
+            try
+            {
+                await _iSurveyRepository.SubmitForEvaluation(id);
+                return Ok();
             }
             catch (Exception ex)
             {

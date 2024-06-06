@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 using TourismFormsAPI.Interfaces;
 using TourismFormsAPI.Interfaces.Services;
+using TourismFormsAPI.Models;
 using TourismFormsAPI.ModelsDTO.Requests;
 
 namespace TourismFormsAPI.Controllers
@@ -30,7 +31,23 @@ namespace TourismFormsAPI.Controllers
                 await _iAnswerRepository.SaveMyAll(body);
 
                 await _iEmailSenderService.SendEmailAsync(Convert.ToString(HttpContext.User.Claims.First(x => x.Type == "email").Value), "Вам новая анкета", "Вам новая акента");
-                
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.Message);
+            }
+        }
+        #endregion
+
+        #region PUT
+        [HttpPut("UpdateMyAll"), Authorize(Policy = "IsAdmin")]
+        public async Task<IActionResult> UpdateMyAll([FromBody] AnswerPut[] body)
+        {
+            try
+            {
+                await _iAnswerRepository.UpdateMyAll(body);
                 return Ok();
             }
             catch (Exception ex)

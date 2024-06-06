@@ -1,4 +1,5 @@
 ﻿using TourismFormsAPI.Models;
+using TourismFormsAPI.ModelsDTO.Requests;
 
 namespace TourismFormsAPI.Interfaces
 {
@@ -6,5 +7,7 @@ namespace TourismFormsAPI.Interfaces
     {
         public List<Question> GetAll();
         public Question GetById(int id);
+        public Task CreateArray(QuestionPost[] body);
+        public Task UpdateArray(QuestionPut[] body);
     }
 }

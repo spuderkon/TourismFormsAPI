@@ -7,7 +7,8 @@ namespace TourismFormsAPI.Interfaces
     {
         public List<Form> GetAll();
         public Form? GetById(int id);
+        public Task<byte[]> GetExcel(int id);
         public Form Create(FormPost body);
-
+        public Task Update(FormPut body);
     }
 }

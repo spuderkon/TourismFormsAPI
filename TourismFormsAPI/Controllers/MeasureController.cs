@@ -18,20 +18,22 @@ namespace TourismFormsAPI.Controllers
         {
             _iMeasureRepository = iMeasureRepository;
         }
+
         #region GET
-        [HttpGet("GetAll"), Authorize(Policy = "isAdmin")]
-        public ActionResult<IEnumerable<Measure>> GetAll()
+        [HttpGet("GetAll"), Authorize(Policy = "IsAdmin")]
+        public async Task<ActionResult<IEnumerable<Measure>>> GetAll()
         {
-            return Ok(_iMeasureRepository.GetAll());
+            return Ok(await _iMeasureRepository.GetAll());
         }
         #endregion
+
         #region POST
-        [HttpPost("Create/{name}"), Authorize(Policy = "isAdmin")]
-        public IActionResult Create(string name)
+        [HttpPost("Create"), Authorize(Policy = "IsAdmin")]
+        public async Task<IActionResult> Create([FromBody] MeasurePost body)
         {
             try
             {
-                return Ok(_iMeasureRepository.Create(name));
+                return Ok(await _iMeasureRepository.Create(body));
             }
             catch (Exception ex)
             {
@@ -41,16 +43,28 @@ namespace TourismFormsAPI.Controllers
         #endregion
 
         #region PUT
-
-        #endregion
-
-        #region DELETE
-        [HttpDelete("Delete/{id}"), Authorize(Policy = "isAdmin")]
-        public ActionResult Delete(int id)
+        [HttpPut("Update"), Authorize(Policy = "IsAdmin")]
+        public async Task<IActionResult> Update([FromBody] MeasurePut body)
         {
             try
             {
-                _iMeasureRepository.Delete(id);
+                await _iMeasureRepository.Update(body);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return NotFound();
+            }
+        }
+        #endregion
+
+        #region DELETE
+        [HttpDelete("Delete/{id}"), Authorize(Policy = "IsAdmin")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            try
+            {
+                await _iMeasureRepository.Delete(id);
                 return Ok();
             }
             catch (Exception ex)

@@ -9,13 +9,14 @@ using System.Text;
 using TourismFormsAPI.Tools;
 using TourismFormsAPI.Interfaces.Services;
 using TourismFormsAPI.Services;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("isAdmin", policy => policy.Requirements.Add(new HasAdminClaim()));
+    options.AddPolicy("IsAdmin", policy => policy.Requirements.Add(new HasAdminClaim()));
 });
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 .AddJwtBearer(x => {
@@ -42,17 +43,23 @@ builder.Services.AddControllers().AddNewtonsoftJson(options =>
 );
 
 string connection = builder.Configuration.GetConnectionString("Tourism")!;
+builder.Services.AddDbContext<TourismContext>(options => options.UseSqlServer(connection));
 builder.Services.AddTransient<IAnswerRepository, AnswerRepository>();
 builder.Services.AddTransient<IAuthRepository, AuthRepository>();
-builder.Services.AddDbContext<TourismContext>(options => options.UseSqlServer(connection));
-builder.Services.AddTransient<IMunicipalityRepository, MunicipalityRepository>();
-builder.Services.AddTransient<IFormRepository, FormRepository>();
-builder.Services.AddTransient<IFillMethodRepository, FillMethodRepository>();
-builder.Services.AddTransient<IMeasureRepository, MeasureRepository>();
+builder.Services.AddTransient<ICityRepository, CityRepository>();
 builder.Services.AddTransient<ICriteriaRepository, CriteriaRepository>();
+builder.Services.AddTransient<IFillMethodRepository, FillMethodRepository>();
+builder.Services.AddTransient<IFormRepository, FormRepository>();
+builder.Services.AddTransient<IMeasureRepository, MeasureRepository>();
+builder.Services.AddTransient<IMunicipalityRepository, MunicipalityRepository>();
+builder.Services.AddTransient<IQuestionRepository, QuestionRepository>();
+builder.Services.AddTransient<IRegionRepository, RegionRepository>();
 builder.Services.AddTransient<ISurveyRepository, SurveyRepository>();
 
 builder.Services.AddTransient<IEmailSenderService, EmailSenderService>();
+
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration).CreateLogger();
 
 var app = builder.Build();
 
@@ -63,7 +70,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors(opt => { opt.AllowAnyHeader(); opt.AllowAnyOrigin(); opt.AllowAnyMethod(); });
+app.UseCors(opt => { opt.AllowAnyHeader(); opt.AllowAnyOrigin(); opt.AllowAnyMethod(); opt.WithExposedHeaders("content-disposition"); });
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
