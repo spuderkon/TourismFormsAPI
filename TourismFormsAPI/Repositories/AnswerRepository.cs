@@ -1,7 +1,14 @@
 ﻿using System.Linq.Expressions;
+using System.Text.RegularExpressions;
+
+using AngouriMath;
+
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 using TourismFormsAPI.Interfaces;
 using TourismFormsAPI.Models;
+using TourismFormsAPI.ModelsDTO;
 using TourismFormsAPI.ModelsDTO.Requests;
 
 namespace TourismFormsAPI.Repositories
@@ -9,10 +16,12 @@ namespace TourismFormsAPI.Repositories
     public class AnswerRepository : IAnswerRepository
     {
         private readonly TourismContext _context;
+        private readonly IFormRepository _iFormRepository;
 
-        public AnswerRepository(TourismContext context)
+        public AnswerRepository(TourismContext context, IFormRepository iFormRepository)
         {
             _context = context;
+            _iFormRepository = iFormRepository;
         }
 
         #region POST
@@ -27,11 +36,12 @@ namespace TourismFormsAPI.Repositories
                         SurveyId = item.SurveyId,
                         Text = item.Text,
                         QuestionId = item.QuestionId,
-                        Score = GetScore(item)
+                        Score = 0
                     };
                     _context.Answers.Add(itemToCreate);
                 }
                 _context.SaveChanges();
+                //SetScore(body[0].SurveyId);
                 return Task.CompletedTask;
             }
             catch (Exception ex)
@@ -58,74 +68,84 @@ namespace TourismFormsAPI.Repositories
                     {
                         SurveyId = item.SurveyId,
                         Text = item.Text,
-                        Score = 5,
+                        Score = null,
                         QuestionId = item.QuestionId,
                     };
                     _context.Answers.Add(itemToCreate);
                 }
             }
             _context.SaveChanges();
+            SetScore(body[1].SurveyId);
             return Task.CompletedTask;
         }
         #endregion
 
         #region TOOLMETHODS
-        public int GetScore(AnswerPost body)
+        public void SetScore(int surveyId)
         {
             try
             {
-                var question = _context.Questions.FirstOrDefault(q => q.Id == body.QuestionId);
-                if(question is not null)
+                var answersBySurveyId = _context.Answers.Where(a => a.SurveyId == surveyId).ToList();
+
+                var survey = _context.Surveys.Where(s => s.Id == surveyId).Include(s => s.Form).FirstOrDefault();
+                var criterias = _context.Criteria.Where(c => c.FormId == survey.FormId).Include(c => c.Questions).ToList();
+                
+                foreach(var criteria in criterias)
                 {
-                    if (question.Formula == "=0")
-                        return 0;
-
-
-                    var questions = _context.Questions.Where(q => q.CriteriaId == question.CriteriaId).ToList();
-
-                    string[] elements = question.Formula!.Split(['*', '+', '=', '/', '-']);
-                    var result = 0.0;
-                    foreach (string element in elements)
+                    foreach(var question in criteria.Questions)
                     {
-                        if(element.Length > 2)
+                        if (question.Formula != "=0" && !question.Formula.IsNullOrEmpty() )
                         {
-                            var number = questions.FirstOrDefault(q => q.Sequence == GetNumberFromLetter(element[0]));
-                        }    
+                            string[] elements = question.Formula!.Split(['*', '+', '=', '/', '-']);
+                            elements = elements.Skip(1).ToArray();
+                            string pattern = @"[\+\-\*\/]";
+                            MatchCollection matches = Regex.Matches(question.Formula, pattern);
+                            var result = new List<string>();
+                            var answer = answersBySurveyId.FirstOrDefault();
+                            foreach (string element in elements)
+                            {
+                                bool isNumeric = int.TryParse(element, out int n);
+                                if (element.Length >= 2 && !isNumeric)
+                                { 
+                                    int criteriaSequence = GetNumberFromLetter(element[0], element);
+                                    var criteriaBySequence = criterias.FirstOrDefault(c => c.Sequence == criteriaSequence);
+                                    int questionSequence = Convert.ToInt32(element.Substring(1));
+                                    var questionBySequence = criteriaBySequence.Questions.FirstOrDefault(c => c.Sequence == questionSequence);
+                                    answer = answersBySurveyId.FirstOrDefault(a => a.QuestionId == questionBySequence.Id);
+                                    result.Add(answer.Text);
+                                }
+                                else
+                                    result.Add(element);
+                            }
+                            var str = "";
+                            for(int i =0; i < result.Count; i++)
+                            {
+                                if(i+1 < result.Count)
+                                    str += result[i].ToString() + matches[i];
+                                else
+                                    str += result[i].ToString();
+                            }
+                            if(result.Count != 0)
+                            {
+                                Entity expr = str;
+                                var resultExpr = (double)expr.EvalNumerical();
+                                answer.Score = resultExpr;
+                                _context.Answers.Update(answer);
+                                _context.SaveChanges();
+                            }
+                        }
+                       
                     }
                 }
-                /*double result = 0;
-                if (question is not null)
-                {
-                    if (question.Formula == "=0")
-                    {
-                        return 0;
-                    }
-                    
-                    var questions = _context.Questions.Where(q => q.CriteriaId == question.CriteriaId).ToList();
 
-                    string[] elements = question.Formula.Split(['*', '+', '=', '/', '-']);
-                    foreach (var element in elements) 
-                    {
-                        if(element.Length > 2)
-                        {
-                            var number = questions.FirstOrDefault(q => q.Sequence == GetNumberFromLetter(element[0]));
-                        }
-                        else
-                        {
-                            var number = questions.FirstOrDefault(q => q.Sequence == GetNumberFromLetter(element));
-                        }
-    
-                    }
-                }*/
             }
             catch (Exception ex)
             {
                 throw new Exception(ex.Message);
             }
-            
-            return 0;
+           
         }
-        public int GetNumberFromLetter(char letter)
+        public int GetNumberFromLetter(char letter, string check)
         {
             // Проверяем, является ли символ кириллической буквой
             if (!char.IsLetter(letter) || !char.IsUpper(letter))

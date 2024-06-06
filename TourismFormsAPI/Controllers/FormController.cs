@@ -22,7 +22,7 @@ namespace TourismFormsAPI.Controllers
 
         #region GET
 
-        [HttpGet("GetAll"), Authorize(Policy = "isAdmin")]
+        [HttpGet("GetAll"), Authorize(Policy = "IsAdmin")]
         public ActionResult<IEnumerable<Form>> GetAll() 
         {
             return (_iFormRepository.GetAll());
@@ -35,7 +35,7 @@ namespace TourismFormsAPI.Controllers
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         $"form{id}.xlsx");
         }
-        [HttpGet("GetById/{id}"), Authorize(Policy = "isAdmin")]
+        [HttpGet("GetById/{id}"), Authorize(Policy = "IsAdmin")]
         public ActionResult<Form?> GetById(int id)
         {
             try
@@ -50,7 +50,7 @@ namespace TourismFormsAPI.Controllers
         #endregion
 
         #region POST
-        [HttpPost("Create"), Authorize(Policy = "isAdmin")]
+        [HttpPost("Create"), Authorize(Policy = "IsAdmin")]
         public IActionResult Create([FromBody] FormPost body)
         {
             return Ok(_iFormRepository.Create(body));
@@ -64,7 +64,7 @@ namespace TourismFormsAPI.Controllers
         #endregion
 
         #region PUT
-        [HttpPut("Update"), Authorize(Policy = "isAdmin")]
+        [HttpPut("Update"), Authorize(Policy = "IsAdmin")]
         public async Task<IActionResult> Update([FromBody] FormPut body)
         {
             try

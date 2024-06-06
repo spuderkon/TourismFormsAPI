@@ -13,9 +13,9 @@ namespace TourismFormsAPI.Tools
 
         protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, HasAdminClaim requirement)
         {
-            if (context.User.HasClaim(c => c.Type == "isAdmin"))
+            if (context.User.HasClaim(c => c.Type == "IsAdmin"))
             {
-                if(context.User.FindFirst(c => c.Type == "isAdmin").Value == "True")
+                if(context.User.FindFirst(c => c.Type == "IsAdmin").Value == "True")
                 {
                     context.Succeed(requirement);
                     return Task.CompletedTask;

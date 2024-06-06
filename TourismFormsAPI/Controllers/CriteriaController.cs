@@ -29,7 +29,7 @@ namespace TourismFormsAPI.Controllers
             return Ok(_iCriteriaRepository.GetAll());
         }
 
-        [HttpPost("CreateArray"), Authorize(Policy = "isAdmin")]
+        [HttpPost("CreateArray"), Authorize(Policy = "IsAdmin")]
         public IActionResult CreateArray([FromBody] CriteriaPost[] body)
         {
             try
@@ -42,7 +42,7 @@ namespace TourismFormsAPI.Controllers
             }
         }
 
-        [HttpPut("UpdateArray"), Authorize(Policy = "isAdmin")]
+        [HttpPut("UpdateArray"), Authorize(Policy = "IsAdmin")]
         public async Task<IActionResult> UpdateArray([FromBody] CriteriaPut[] body)
         {
             try

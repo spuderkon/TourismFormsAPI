@@ -150,12 +150,12 @@ namespace TourismFormsAPI.Controllers
                 return NotFound();
             }
         }
-        [HttpPut("SubmitForEvaluation/{id}"), Authorize]
+        [HttpPut("SubmitForEvaluation/{id}")]
         public async Task<ActionResult> SubmitForEvaluation(int id)
         {
             try
             {
-                await _iSurveyRepository.SubmitForEvaluation(id);
+                 await _iSurveyRepository.SubmitForEvaluation(id);
                 return Ok();
             }
             catch (Exception ex)

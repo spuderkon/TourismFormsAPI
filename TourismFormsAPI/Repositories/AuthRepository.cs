@@ -27,7 +27,7 @@ namespace TourismFormsAPI.Repositories
                 var identity = new ClaimsIdentity(new[] {
                         new Claim("id",municipality.Id.ToString()),
                         new Claim(ClaimTypes.Email, " "),
-                        new Claim("isAdmin", municipality.IsAdmin.ToString()),
+                        new Claim("IsAdmin", municipality.IsAdmin.ToString()),
                 });
 
                 return JwtTools.GenerateJwtToken(identity, _iConfiguration["JwtSettings:Key"]!, _iConfiguration["JwtSettings:Issuer"]!, _iConfiguration["JwtSettings:Audience"]!);
