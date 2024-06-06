@@ -69,22 +69,25 @@ namespace TourismFormsAPI.Repositories
                         ws.Cell("G4").Value = "Оценка";
                         ws.Cell("G4").Style.Font.Bold = true;
 
-
-                        foreach (var criteria in criterias)
+                        if(answers.Count != 0)
                         {
-                            foreach (var question in criteria.Questions)
+                            foreach (var criteria in criterias)
                             {
-                                var answer = answers.FirstOrDefault(a => a.QuestionId == question.Id);
-                                ws.Cell($"A{rowIndex}").Value = criteria.Sequence;
-                                ws.Cell($"B{rowIndex}").Value = criteria.Name;
-                                ws.Cell($"C{rowIndex}").Value = question.Name;
-                                ws.Cell($"D{rowIndex}").Value = question.FillMethod == null ? "" : question.FillMethod.Name;
-                                ws.Cell($"E{rowIndex}").Value = answer == null ? "" : answer.Text;
-                                ws.Cell($"F{rowIndex}").Value = question.Hint;
-                                ws.Cell($"G{rowIndex}").Value = answer.Score;
-                                rowIndex++;
+                                foreach (var question in criteria.Questions)
+                                {
+                                    var answer = answers.FirstOrDefault(a => a.QuestionId == question.Id);
+                                    ws.Cell($"A{rowIndex}").Value = criteria.Sequence;
+                                    ws.Cell($"B{rowIndex}").Value = criteria.Name;
+                                    ws.Cell($"C{rowIndex}").Value = question.Name;
+                                    ws.Cell($"D{rowIndex}").Value = question.FillMethod == null ? "" : question.FillMethod.Name;
+                                    ws.Cell($"E{rowIndex}").Value = answer == null ? "" : answer.Text;
+                                    ws.Cell($"F{rowIndex}").Value = question.Hint;
+                                    ws.Cell($"G{rowIndex}").Value = answer.Score;
+                                    rowIndex++;
+                                }
                             }
                         }
+                        
                         
 
                         using (var stream = new MemoryStream())
@@ -107,13 +110,13 @@ namespace TourismFormsAPI.Repositories
         }
         public List<Survey> GetMyAll(int municipalityId)
         {
-            return LoadData(_context.Surveys.Where(s => s.MunicipalityId == municipalityId)).ToList();
+            return LoadData(_context.Surveys.Where(s => s.MunicipalityId == municipalityId && !s.Completed)).ToList();
         }
         public Form? GetMyById(int id, int municipalityId)
         {
             var survey = _context.Surveys.FirstOrDefault(s => s.Id == id && s.MunicipalityId == municipalityId);
             if (survey is not null)
-                return _iFormRepository.GetById(survey.FormId);
+                return _iFormRepository.GetById(survey.FormId, id);
 
             throw new Exception();
         }

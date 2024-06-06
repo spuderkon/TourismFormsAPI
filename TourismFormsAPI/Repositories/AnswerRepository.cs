@@ -54,8 +54,13 @@ namespace TourismFormsAPI.Repositories
         #region PUT
         public Task UpdateMyAll(AnswerPut[] body)
         {
+            bool answersAreFull = true;
             foreach (var item in body)
             {
+                if (answersAreFull)
+                {
+                    answersAreFull = !item.Text.IsNullOrEmpty();
+                }
                 var itemToUpdate = _context.Answers.FirstOrDefault(a => a.SurveyId == item.SurveyId && a.QuestionId == item.QuestionId);
                 if (itemToUpdate is not null) 
                 {
@@ -75,7 +80,8 @@ namespace TourismFormsAPI.Repositories
                 }
             }
             _context.SaveChanges();
-            SetScore(body[1].SurveyId);
+            if(answersAreFull)
+                SetScore(body[1].SurveyId);
             return Task.CompletedTask;
         }
         #endregion
@@ -94,14 +100,14 @@ namespace TourismFormsAPI.Repositories
                 {
                     foreach(var question in criteria.Questions)
                     {
-                        if (question.Formula != "=0" && !question.Formula.IsNullOrEmpty() )
+                        if (question.Formula != "=0" && !question.Formula.IsNullOrEmpty())
                         {
+                            var targetAnswer = answersBySurveyId.FirstOrDefault(a => a.QuestionId == question.Id);
                             string[] elements = question.Formula!.Split(['*', '+', '=', '/', '-']);
                             elements = elements.Skip(1).ToArray();
                             string pattern = @"[\+\-\*\/]";
                             MatchCollection matches = Regex.Matches(question.Formula, pattern);
                             var result = new List<string>();
-                            var answer = answersBySurveyId.FirstOrDefault();
                             foreach (string element in elements)
                             {
                                 bool isNumeric = int.TryParse(element, out int n);
@@ -111,30 +117,34 @@ namespace TourismFormsAPI.Repositories
                                     var criteriaBySequence = criterias.FirstOrDefault(c => c.Sequence == criteriaSequence);
                                     int questionSequence = Convert.ToInt32(element.Substring(1));
                                     var questionBySequence = criteriaBySequence.Questions.FirstOrDefault(c => c.Sequence == questionSequence);
-                                    answer = answersBySurveyId.FirstOrDefault(a => a.QuestionId == questionBySequence.Id);
-                                    result.Add(answer.Text);
+                                    var answerByQuestionSequence = answersBySurveyId.FirstOrDefault(a => a.QuestionId == questionBySequence.Id);
+                                    result.Add(answerByQuestionSequence.Text);
                                 }
                                 else
                                     result.Add(element);
                             }
-                            var str = "";
-                            for(int i =0; i < result.Count; i++)
+                            if (result.Count != 0)
                             {
-                                if(i+1 < result.Count)
-                                    str += result[i].ToString() + matches[i];
-                                else
-                                    str += result[i].ToString();
-                            }
-                            if(result.Count != 0)
-                            {
+                                var str = "";
+                                for(int i =0; i < result.Count; i++)
+                                {
+                                    if(i+1 < result.Count)
+                                        str += result[i].ToString() + matches[i];
+                                    else
+                                        str += result[i].ToString();
+                                }
+                            
                                 Entity expr = str;
                                 var resultExpr = (double)expr.EvalNumerical();
-                                answer.Score = resultExpr;
-                                _context.Answers.Update(answer);
+                                targetAnswer.Score = resultExpr;
+                                _context.Answers.Update(targetAnswer);
                                 _context.SaveChanges();
                             }
                         }
-                       
+                        else if (question.Formula == "=0")
+                        {
+
+                        }
                     }
                 }
 

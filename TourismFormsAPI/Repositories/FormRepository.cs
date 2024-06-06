@@ -88,6 +88,66 @@ namespace TourismFormsAPI.Repositories
             
         }
 
+        public Form? GetById(int id, int surveyId)
+        {
+            try
+            {
+                Form form = _context.Forms.FirstOrDefault(form => form.Id == id);
+                if (form is not null)
+                {
+                    form = _context.Forms
+                                .Where(form => form.Id == id)
+                                .Select(form => new Form
+                                {
+                                    Id = form.Id,
+                                    Name = form.Name,
+                                    CreationDate = form.CreationDate,
+                                    ModifiedDate = form.ModifiedDate,
+                                    Surveys = new List<Survey>(),
+                                    Criterias = form.Criterias.Select(criteria => new Criteria
+                                    {
+                                        Id = criteria.Id,
+                                        Name = criteria.Name,
+                                        FormId = criteria.FormId,
+                                        Sequence = criteria.Sequence,
+                                        Questions = criteria.Questions.Where(q => q.CriteriaId == criteria.Id).Select(question => new Question
+                                        {
+                                            Id = question.Id,
+                                            Name = question.Name,
+                                            Hint = question.Hint,
+                                            CriteriaId = question.CriteriaId,
+                                            Sequence = question.Sequence,
+                                            Formula = question.Formula,
+                                            MeasureId = question.MeasureId,
+                                            Hidden = question.Hidden,
+                                            FillMethodId = question.FillMethodId,
+                                            FillMethod = question.FillMethod != null ? new FillMethod
+                                            {
+                                                Id = question.FillMethod.Id,
+                                                Name = question.FillMethod.Name,
+                                                Hint = question.FillMethod.Hint
+                                            } : null,
+                                            Measure = question.Measure != null ? new Measure
+                                            {
+                                                Id = question.Measure.Id,
+                                                Name = question.Measure.Name
+                                            } : null,
+                                            Answers = question.Answers.Where(a => a.QuestionId == question.Id && a.SurveyId == surveyId).ToList(),
+                                        }).ToList()
+                                    }).ToList()
+                                })
+                                .FirstOrDefault()!;
+                    return form;
+                }
+                throw new Exception();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.Message);
+            }
+
+        }
+
         public Task<byte[]> GetExcel(int id)
         {
             try
@@ -126,17 +186,25 @@ namespace TourismFormsAPI.Repositories
                         
                         rowIndex = 3;
                         columnIndex = 2;
+                        double sum = 0;
                         foreach(var survey in surveys)
                         {
+                            sum = 0;
                             foreach (var criteria in form.Criterias )
                             {
                                 foreach (var question in criteria.Questions)
                                 {
                                     var answer = survey.Answers.FirstOrDefault(a => a.SurveyId == survey.Id && a.QuestionId == question.Id);
                                     if (answer is not null)
+                                    {
                                         ws.Cell(rowIndex, columnIndex++).Value = answer.Score;
+                                        if(answer.Score is not null)
+                                            sum += (double)answer.Score;
+                                    }
+
                                 }
                             }
+                            ws.Cell(rowIndex, columnIndex++).Value = sum;
                             columnIndex = 2;
                             rowIndex++;
                         }

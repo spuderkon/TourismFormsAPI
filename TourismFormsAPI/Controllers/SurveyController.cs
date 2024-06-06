@@ -75,7 +75,7 @@ namespace TourismFormsAPI.Controllers
                 return NotFound();
             }
         }
-        [HttpGet("GetExcel/{id}")]
+        [HttpGet("GetExcel/{id}"), Authorize]
         public ActionResult GetExcel(int id)
         {
             try
