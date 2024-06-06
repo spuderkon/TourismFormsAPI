@@ -99,9 +99,9 @@ namespace TourismFormsAPI.Repositories
                 {
                     foreach(var question in criteria.Questions)
                     {
+                        var targetAnswer = answersBySurveyId.FirstOrDefault(a => a.QuestionId == question.Id);
                         if (question.Formula != "=0" && !question.Formula.IsNullOrEmpty())
                         {
-                            var targetAnswer = answersBySurveyId.FirstOrDefault(a => a.QuestionId == question.Id);
                             string[] elements = question.Formula!.Split(['*', '+', '=', '/', '-']);
                             elements = elements.Skip(1).ToArray();
                             string pattern = @"[\+\-\*\/]";
@@ -142,7 +142,9 @@ namespace TourismFormsAPI.Repositories
                         }
                         else if (question.Formula == "=0")
                         {
-
+                            targetAnswer.Score = 0;
+                            _context.Answers.Update(targetAnswer);
+                            _context.SaveChanges();
                         }
                     }
                 }
