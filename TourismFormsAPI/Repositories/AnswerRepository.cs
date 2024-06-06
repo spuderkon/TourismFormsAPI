@@ -41,7 +41,6 @@ namespace TourismFormsAPI.Repositories
                     _context.Answers.Add(itemToCreate);
                 }
                 _context.SaveChanges();
-                //SetScore(body[0].SurveyId);
                 return Task.CompletedTask;
             }
             catch (Exception ex)
@@ -111,7 +110,7 @@ namespace TourismFormsAPI.Repositories
                             foreach (string element in elements)
                             {
                                 bool isNumeric = int.TryParse(element, out int n);
-                                if (element.Length >= 2 && !isNumeric)
+                                if (element.Length == 2 && !isNumeric)
                                 { 
                                     int criteriaSequence = GetNumberFromLetter(element[0], element);
                                     var criteriaBySequence = criterias.FirstOrDefault(c => c.Sequence == criteriaSequence);

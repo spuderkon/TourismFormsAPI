@@ -9,6 +9,7 @@ using TourismFormsAPI.Interfaces;
 using TourismFormsAPI.Models;
 using TourismFormsAPI.ModelsDTO;
 using TourismFormsAPI.ModelsDTO.Requests;
+using TourismFormsAPI.Services;
 
 namespace TourismFormsAPI.Repositories
 {
@@ -104,13 +105,13 @@ namespace TourismFormsAPI.Repositories
                                     CreationDate = form.CreationDate,
                                     ModifiedDate = form.ModifiedDate,
                                     Surveys = new List<Survey>(),
-                                    Criterias = form.Criterias.Select(criteria => new Criteria
+                                    Criterias = form.Criterias.OrderBy(c => c.Sequence).Select(criteria => new Criteria
                                     {
                                         Id = criteria.Id,
                                         Name = criteria.Name,
                                         FormId = criteria.FormId,
                                         Sequence = criteria.Sequence,
-                                        Questions = criteria.Questions.Where(q => q.CriteriaId == criteria.Id).Select(question => new Question
+                                        Questions = criteria.Questions.Where(q => q.CriteriaId == criteria.Id).OrderBy(q => q.Sequence).Select(question => new Question
                                         {
                                             Id = question.Id,
                                             Name = question.Name,
@@ -156,6 +157,9 @@ namespace TourismFormsAPI.Repositories
                 var surveys = _context.Surveys.Where(s => s.FormId == id).Include(s => s.Answers).Include(s => s.City).Include(s => s.Form).ToList();
                 if (surveys is not null && form is not null)
                 {
+                    int columnIndexForGroup = 0;
+                    int rowIndexForGroup = 3;
+                    List<double> sums = new List<double>();
                     using (var workBook = new XLWorkbook())
                     {
                         var ws = workBook.Worksheets.Add($"{form.Name}");
@@ -204,10 +208,22 @@ namespace TourismFormsAPI.Repositories
 
                                 }
                             }
+                            var answers = survey.Answers.Where(a => a.SurveyId == survey.Id).ToList();
+                            
                             ws.Cell(rowIndex, columnIndex++).Value = sum;
+                            sums.Add(sum);
+                            columnIndexForGroup = columnIndex;
                             columnIndex = 2;
                             rowIndex++;
                         }
+
+                        KMeans kmeans = new KMeans(sums);
+                        for (int i = 0; i < surveys.Count; i++ )
+                        {
+                            var q = sums[i];
+                            ws.Cell(rowIndexForGroup++, columnIndexForGroup).Value = kmeans.FindClusterIndex(q);
+                        }
+
                         using (var stream = new MemoryStream())
                         {
                             workBook.SaveAs(stream);
